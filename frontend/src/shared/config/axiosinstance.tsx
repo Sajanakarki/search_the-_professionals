@@ -1,25 +1,26 @@
 import axios from 'axios';
-
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: 'http://localhost:3000/api', 
   withCredentials: true,
 });
 
-// Request Interceptor
+// Attach token if present
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Debug log (disable in production)
+    console.log('[REQ]', (config.baseURL || '') + (config.url || ''));
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response Interceptor
+// Handle 401 globally
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {

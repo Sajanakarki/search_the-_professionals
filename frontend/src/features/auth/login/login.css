@@ -1,11 +1,11 @@
-/* Reset */
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-/* Body Styles with Animated Background */
+
 body {
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: linear-gradient(-45deg, #fdf6f0, #fae6dc, #fbeee0, #fdf8f6);
@@ -21,14 +21,13 @@ body {
   overflow: hidden;
 }
 
-/* Gradient Animation */
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
-/* Floating Particles */
+
 body::before,
 body::after {
   content: "";
@@ -57,7 +56,7 @@ body::after {
   50% { transform: translateY(40px) scale(1.05); }
 }
 
-/* Wrapper */
+
 .login-wrapper {
   display: flex;
   background-color: #ffffff;
@@ -73,7 +72,7 @@ body::after {
   z-index: 2;
 }
 
-/* Slide-in Animation */
+
 @keyframes slideUp {
   from {
     transform: translateY(40px);
@@ -85,7 +84,7 @@ body::after {
   }
 }
 
-/* Title */
+
 .login-card h2 {
   text-align: center;
   color: #4E342E;
@@ -103,7 +102,6 @@ body::after {
   letter-spacing: 0.3px;
 }
 
-/* Fields */
 .login-field {
   margin-bottom: 22px;
 }
@@ -133,7 +131,7 @@ body::after {
   box-shadow: 0 0 0 4px rgba(161, 136, 127, 0.2);
 }
 
-/* Button */
+
 .login-btn {
   width: 100%;
   margin-top: 15px;
@@ -172,7 +170,7 @@ body::after {
   background: linear-gradient(to right, #c57b57, #6b3e26);
 }
 
-/* Footer */
+
 .login-card h4 {
   text-align: center;
   font-size: 14px;
@@ -191,7 +189,7 @@ body::after {
   text-decoration: underline;
 }
 
-/* Responsive */
+
 @media (max-width: 600px) {
   .login-wrapper {
     padding: 30px 20px;

@@ -4,18 +4,20 @@ import userRoutes from './routes/user.route.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
-
-const app=express();
 dotenv.config();
 
+const app = express();
+
 app.use(cors({
-   origin: 'http://localhost:5173' ,
-   credentials: true
+  origin: 'http://localhost:5173',
+  credentials: true
 }));
 
-//helps read json data
 app.use(express.json());
-app.use('/api/auth', authRoutes); //prefix all routes
-app.use('/api/user', userRoutes); //prefix all routes
+
+
+app.get('/', (_req, res) => res.send('This is the Homepage.'));
+app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);  
 
 export default app;

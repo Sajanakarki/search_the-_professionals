@@ -1,14 +1,51 @@
-// user.route.js
-import { Router } from 'express';
-import { getUserList, searchUsers } from '../Controller/user.controller.js';
+import { Router } from "express";
+import {
+  
+  getUserList,
+  searchUsers,
+  getUserProfile,
+  updateUserProfile,
+  updateUserArrays,
+  addExperienceItem,
+  updateExperienceItem,
+  deleteExperienceItem,
+  addEducationItem,
+  updateEducationItem,
+  deleteEducationItem,
+} from "../Controller/user.controller.js";
 
 const router = Router();
 
-// Route to get all users (uses controller)
-router.get('/userslist', getUserList);
+/* ========== Public ========== */
+router.get("/userslist", getUserList);
+router.get("/search", searchUsers);
+router.get("/user/profile/:id", getUserProfile);
 
-// Route to search users by name or email
-router.get('/search', searchUsers);
+/* ========== Owner-only edits (add guard when ready) ========== */
+router.patch("/user/profile/:id", /* ...guard, */ updateUserProfile);
+router.patch("/user/profile/:id/arrays", /* ...guard, */ updateUserArrays);
+
+/* Experience */
+router.post("/user/profile/:id/experience", /* ...guard, */ addExperienceItem);
+router.put(
+  "/user/profile/:id/experience/:expId",
+  /* ...guard, */ updateExperienceItem
+);
+router.delete(
+  "/user/profile/:id/experience/:expId",
+  /* ...guard, */ deleteExperienceItem
+);
+
+/* Education */
+router.post("/user/profile/:id/education", addEducationItem);
+router.put(
+  "/user/profile/:id/education/:eduId",
+   updateEducationItem
+);
+router.delete(
+  "/user/profile/:id/education/:eduId",
+  /* ...guard, */ deleteEducationItem
+);
 
 export default router;
 
