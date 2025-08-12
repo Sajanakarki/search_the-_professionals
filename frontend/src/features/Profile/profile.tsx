@@ -63,6 +63,18 @@ export default function Profile() {
   if (loading) return <main className="p-page"><div className="card"><p>Loading…</p></div></main>;
   if (error || !data) return <main className="p-page"><div className="card"><p>{error || "No profile found."}</p></div></main>;
 
+  
+  const initials = useMemo(() => {
+    const name = data?.username?.trim() || "";
+    if (!name) return "";
+    return name
+      .split(/\s+/)        
+      .map((n) => n[0])    
+      .slice(0, 2)        
+      .join("")
+      .toUpperCase();
+  }, [data?.username]);
+
   return (
     <main className="p-page">
       <div className="top-actions">
@@ -70,10 +82,10 @@ export default function Profile() {
         <button className="btn pill" onClick={goEdit}>Edit Profile</button>
       </div>
 
-      {/* Header */}
+      
       <section className="card header-card row">
         <div className="avatar-big name-in" aria-hidden>
-          <span className="avatar-name">{data.username || "User"}</span>
+          <span className="avatar-name">{initials}</span> 
         </div>
 
         <div className="header-main">
@@ -92,7 +104,7 @@ export default function Profile() {
         </div>
       </section>
 
-      {/* Main grid */}
+      
       <div className="grid">
         <div className="col">
           {/* Skills */}
