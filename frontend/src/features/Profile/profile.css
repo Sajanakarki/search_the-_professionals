@@ -2,7 +2,7 @@
   max-width: 1080px;
   margin: 24px auto 56px;
   padding: 0 16px;
-  color: #2d2218;
+  color: #2d2218; 
   overflow-y: auto; 
   scroll-behavior: smooth; 
 }

@@ -15,7 +15,6 @@ body {
   justify-content: center;
 
   
-  overflow: hidden;
   padding: 16px;     
   position: relative;
 }
@@ -64,8 +63,7 @@ body::after  { bottom: -80px; right: -80px; animation-delay: 3s; }
   animation: fadeInUp .7s ease both;
   display: grid;
   row-gap: 12px;
-  max-height: calc(100vh - 64px);     
-  overflow: hidden;                       
+  max-height: calc(100vh - 64px);                           
 }
 
 .register-card:hover { box-shadow: 0 16px 50px rgba(0,0,0,.12); }

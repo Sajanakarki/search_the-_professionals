@@ -45,10 +45,10 @@ const userSchema = new Schema(
     // Basic profile
     phone: { type: String, default: "" },
     address: { type: String, default: "" },
-    locationText: { type: String, default: "" },    // pretty location shown in header
+    locationText: { type: String, default: "" },    
     avatarUrl: { type: String, default: "" },
-    title: { type: String, default: "" },           // headline
-    summary: { type: String, default: "" },         // bio
+    title: { type: String, default: "" },      
+    summary: { type: String, default: "" },
 
     // Monetization / availability
     hourlyRate: { type: Number, default: null },
@@ -62,15 +62,12 @@ const userSchema = new Schema(
     experienceItems: { type: [experienceSchema], default: [] },
     educationItems: { type: [educationSchema], default: [] },
 
-    // Deprecated single-string fields (kept for backward compatibility)
-    // We’ll ignore them on the new UI, but we don’t break old data.
     education: { type: String, default: "", select: false },
     experience: { type: String, default: "", select: false }
   },
   { timestamps: true }
 );
 
-/* Hide sensitive/internal fields on JSON */
 userSchema.set("toJSON", {
   virtuals: true,
   transform: (_doc, ret) => {

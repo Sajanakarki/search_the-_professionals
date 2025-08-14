@@ -7,7 +7,7 @@ import { loginApi } from '../../../shared/config/api';
 function Login() {
   const [form, setFormData] = useState({ username: '', password: '' });
 
-  // Inline page messages
+
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
