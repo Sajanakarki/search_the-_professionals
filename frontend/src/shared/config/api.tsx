@@ -1,5 +1,6 @@
 import axiosInstance from "./axiosinstance";
 
+
 export const getUserByIdApi = (id: string) =>
   axiosInstance.get(`/users/${id}`);
 

@@ -1,270 +1,246 @@
-import { useState } from 'react';
-import './resgister.css';
-import { registerApi } from '../../../shared/config/api';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import type { AxiosError } from "axios";
+import { registerApi, loginApi } from "../../../shared/config/api";
+import "./resgister.css";
 
-type Form = {
+type FormValues = {
   username: string;
   email: string;
+  phone: string;         // collected for UI; not sent (your backend expects only 3 fields)
+  locationText: string;  // collected for UI; not sent
   password: string;
   confirm: string;
-  phone: string;
-  locationText: string;
 };
 
-type Errors = Partial<Record<keyof Form, string>>;
-type Touched = Partial<Record<keyof Form, boolean>>;
-
 /* Validation rules */
-const FULLNAME_REGEX = /^[A-Za-z][A-Za-z' -]{2,49}$/;                  // letters, spaces, ', -, 3–50
-const EMAIL_REGEX = /^[a-z0-9._%+-]+@gmail\.com$/i;                     // Gmail only
-const NEPAL_MOBILE_REGEX = /^(?:\+?977[- ]?)?(?:9[78]\d{8})$/;          // +977 optional, 98/97 + 8 digits
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;    // 8+, 1 letter, 1 number, 1 special
+const NAME_REGEX = /^(?! )[A-Za-z ]{3,50}(?<! )$/;                   // letters+spaces, 3–50, no edge spaces
+const EMAIL_REGEX = /^\S+@\S+\.\S+$/i;                               // general email format
+const PHONE_REGEX = /^\d{10}$/;                                      // exactly 10 digits
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^\w\s]).{8,}$/; // 8+, 1 letter, 1 number, 1 special
 
-function Register() {
-  const [form, setForm] = useState<Form>({
-    username: '',
-    email: '',
-    password: '',
-    confirm: '',
-    phone: '',
-    locationText: '',
+export default function Register() {
+  const navigate = useNavigate();
+  const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    clearErrors,
+    getValues,
+    formState: { errors, isValid, isSubmitting },
+  } = useForm<FormValues>({
+    mode: "onChange",
+    criteriaMode: "firstError",
+    defaultValues: {
+      username: "",
+      email: "",
+      phone: "",
+      locationText: "",
+      password: "",
+      confirm: "",
+    },
   });
 
-  const [errors, setErrors] = useState<Errors>({});
-  const [touched, setTouched] = useState<Touched>({});
-  const [submitted, setSubmitted] = useState(false);
-
-  const [apiMsg, setApiMsg] = useState<{ ok?: string; err?: string }>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  const navigate = useNavigate();
-
-  const normalizeName = (v: string) => v.replace(/\s+/g, ' ').trim();
-
-  const validate = (v: Form): Errors => {
-    const e: Errors = {};
-
-    const name = normalizeName(v.username);
-    if (!name) e.username = 'Name is required';
-    else if (!FULLNAME_REGEX.test(name))
-      e.username = "Use letters, spaces, ' or -. 3–50 characters";
-
-    if (!v.email.trim()) e.email = 'Email is required';
-    else if (!EMAIL_REGEX.test(v.email.trim()))
-      e.email = 'Use a Gmail address (username@gmail.com)';
-
-    if (!v.phone.trim()) e.phone = 'Phone number is required';
-    else if (!NEPAL_MOBILE_REGEX.test(v.phone.trim()))
-      e.phone = 'Use 98/97 + 8 digits (e.g., 98XXXXXXXX), +977 optional';
-
-    if (!v.password) e.password = 'Password is required';
-    else if (!PASSWORD_REGEX.test(v.password))
-      e.password = 'Min 8 chars with a letter, a number, and a special';
-
-    if (!v.confirm) e.confirm = 'Please confirm your password';
-    else if (v.password !== v.confirm)
-      e.confirm = 'Passwords do not match';
-
-    if (!v.locationText.trim()) e.locationText = 'Location is required';
-
-    return e;
-  };
-
-  /** Only show error after submit, or after user touched & entered some text */
-  const showError = (field: keyof Form) => {
-    const val = String((form[field] as string) ?? '');
-    const hasText = val.trim() !== '';
-    return (submitted || (touched[field] && hasText)) && !!errors[field];
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    let val = value;
-
-    if (name === 'username') {
-      // allow letters, spaces, apostrophes and hyphens; collapse multiple spaces
-      val = value.replace(/[^A-Za-z' -]/g, '').replace(/\s{2,}/g, ' ');
-    }
-    if (name === 'phone') {
-      // allow digits, +, space and dash
-      val = value.replace(/[^\d+ -]/g, '');
-    }
-    if (name === 'email') {
-      // remove spaces and lowercase to match gmail rule
-      val = value.replace(/\s+/g, '').toLowerCase();
-    }
-
-    setForm(prev => {
-      const next = { ...prev, [name]: val } as Form;
-
-      // live-validate only if submitted OR the field has been touched and has text
-      const nextVal = String(next[name as keyof Form] ?? '');
-      const hasText = nextVal.trim() !== '';
-      if (submitted || (touched as any)[name]) {
-        const fieldErr = hasText ? validate(next)[name as keyof Form] : undefined;
-        setErrors(p => ({ ...p, [name]: fieldErr }));
-      } else {
-        setErrors(p => ({ ...p, [name]: undefined }));
-      }
-      return next;
-    });
-
-    setApiMsg({});
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const name = e.target.name as keyof Form;
-    setTouched(p => ({ ...p, [name]: true }));
-
-    // On blur: validate only if there's text OR after submit
-    const hasText = (form[name] as string)?.trim() !== '';
-    const fieldErr = (submitted || hasText) ? validate(form)[name] : undefined;
-    setErrors(p => ({ ...p, [name]: fieldErr }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setApiMsg({});
-
-    const v = validate(form);
-    setErrors(v);
-    if (Object.keys(v).length) return;
-
-    const payload = {
-      username: normalizeName(form.username),
-      email: form.email.trim().toLowerCase(), // keep lowercase
-      password: form.password,
-      phone: form.phone.trim(),
-      locationText: form.locationText.trim(),
-    };
-
+  const onSubmit = async (data: FormValues) => {
     try {
-      setSubmitting(true);
+      setBanner(null);
+      clearErrors();
+
+      // Type payload EXACTLY as registerApi expects to avoid TS inference errors
+      const payload: Parameters<typeof registerApi>[0] = {
+        username: data.username.replace(/\s+/g, " ").trim(),
+        email: data.email.trim().toLowerCase(),
+        password: data.password,
+      };
+
+      // 1) Register
       await registerApi(payload);
-      setApiMsg({ ok: 'Registration successful. Redirecting to login…' });
-      setForm({
-        username: '',
-        email: '',
-        password: '',
-        confirm: '',
-        phone: '',
-        locationText: '',
+
+      // 2) Auto-login (your backend logs in with username + password)
+      const loginRes = await loginApi({
+        username: payload.username,
+        password: payload.password,
       });
-      setTouched({});
-      setSubmitted(false);
-      setTimeout(() => navigate('/login'), 1200);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Registration failed. Try again.';
-      setApiMsg({ err: msg });
-    } finally {
-      setSubmitting(false);
+
+      // 3) Persist & go home
+      const u = (loginRes?.data?.user ?? loginRes?.data ?? {}) as any;
+      u.role = (u.role || "user").toString().toLowerCase();
+
+      localStorage.setItem("token", loginRes.data.token);
+      localStorage.setItem("currentUser", JSON.stringify(u));
+
+      navigate("/home");
+    } catch (err) {
+      const e = err as AxiosError<any>;
+      const msg = e.response?.data?.message || "Registration failed. Please try again.";
+      setBanner({ type: "err", text: msg });
+
+      // Attach error to a likely field for better UX
+      const lower = msg.toLowerCase();
+      if (lower.includes("name") || lower.includes("user")) {
+        setError("username", { message: msg }, { shouldFocus: true });
+      } else if (lower.includes("mail")) {
+        setError("email", { message: msg }, { shouldFocus: true });
+      } else if (lower.includes("password")) {
+        setError("password", { message: msg }, { shouldFocus: true });
+      } else {
+        setError("confirm", { message: msg }, { shouldFocus: true });
+      }
     }
   };
 
   return (
     <main className="register-wrapper">
-      <form className="register-card" onSubmit={handleSubmit} noValidate>
-        <h2>Register</h2>
+      <form className="register-card" onSubmit={handleSubmit(onSubmit)} noValidate>
+        <h2 className="register-title">Register</h2>
 
-        {apiMsg.ok && <div className="alert alert-success">{apiMsg.ok}</div>}
-        {apiMsg.err && <div className="alert alert-error">{apiMsg.err}</div>}
+        {banner && (
+          <div className={`alert ${banner.type === "ok" ? "alert-success" : "alert-error"}`} role="alert">
+            {banner.text}
+          </div>
+        )}
 
+        {/* Name */}
         <div className="register-field">
           <label htmlFor="username">Name</label>
           <input
             id="username"
             type="text"
-            name="username"
-            value={form.username}
-            onChange={handleChange}
-            onBlur={handleBlur}
+            placeholder="Name"
             autoComplete="name"
-            maxLength={50}
-            required
+            {...register("username", {
+              required: "Name is required",
+              pattern: { value: NAME_REGEX, message: "Only letters & spaces (3–50 chars)" },
+              onChange: (e) => {
+                e.target.value = e.target.value
+                  .replace(/[^A-Za-z ]/g, "")
+                  .replace(/\s{2,}/g, " ")
+                  .slice(0, 50);
+              },
+            })}
+            className={errors.username ? "has-error" : undefined}
+            aria-invalid={!!errors.username}
+            aria-describedby={errors.username ? "username-error" : undefined}
           />
-          {showError('username') && <div className="field-error">{errors.username}</div>}
+          {errors.username && (
+            <div id="username-error" className="field-error">{errors.username.message}</div>
+          )}
         </div>
 
+        {/* Email */}
         <div className="register-field">
-          <label htmlFor="email">Email </label>
+          <label htmlFor="email">Email</label>
           <input
             id="email"
             type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            onBlur={handleBlur}
+            placeholder="Email"
             autoComplete="email"
-            required
+            {...register("email", {
+              required: "Email is required",
+              pattern: { value: EMAIL_REGEX, message: "Enter a valid email" },
+              onChange: (e) => (e.target.value = e.target.value.trim()),
+            })}
+            className={errors.email ? "has-error" : undefined}
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
           />
-          {showError('email') && <div className="field-error">{errors.email}</div>}
+          {errors.email && (
+            <div id="email-error" className="field-error">{errors.email.message}</div>
+          )}
         </div>
 
+        {/* Phone (client-side only) */}
         <div className="register-field">
           <label htmlFor="phone">Phone</label>
           <input
             id="phone"
             type="tel"
-            name="phone"
-            value={form.phone}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            inputMode="tel"
-            required
+            placeholder="10-digit mobile number"
+            inputMode="numeric"
+            {...register("phone", {
+              required: "Mobile number is required",
+              pattern: { value: PHONE_REGEX, message: "Enter a 10-digit mobile number" },
+              onChange: (e) => (e.target.value = e.target.value.replace(/\D/g, "").slice(0, 10)),
+            })}
+            className={errors.phone ? "has-error" : undefined}
+            aria-invalid={!!errors.phone}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
           />
-          {showError('phone') && <div className="field-error">{errors.phone}</div>}
+          {errors.phone && (
+            <div id="phone-error" className="field-error">{errors.phone.message}</div>
+          )}
         </div>
 
+        {/* Location (client-side only) */}
         <div className="register-field">
           <label htmlFor="locationText">Location</label>
           <input
             id="locationText"
             type="text"
-            name="locationText"
-            value={form.locationText}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            required
+            placeholder="Your location"
+            {...register("locationText", {
+              required: "Location is required",
+              onChange: (e) => (e.target.value = e.target.value.replace(/\s+/g, " ").slice(0, 60)),
+            })}
+            className={errors.locationText ? "has-error" : undefined}
+            aria-invalid={!!errors.locationText}
+            aria-describedby={errors.locationText ? "location-error" : undefined}
           />
-          {showError('locationText') && (
-            <div className="field-error">{errors.locationText}</div>
+          {errors.locationText && (
+            <div id="location-error" className="field-error">{errors.locationText.message}</div>
           )}
         </div>
 
+        {/* Password */}
         <div className="register-field">
           <label htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            onBlur={handleBlur}
+            placeholder="Password"
             autoComplete="new-password"
-            required
+            {...register("password", {
+              required: "Password is required",
+              pattern: {
+                value: PASSWORD_REGEX,
+                message: "Min 8, include a letter, a number and a special character",
+              },
+            })}
+            className={errors.password ? "has-error" : undefined}
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? "password-error" : undefined}
           />
-          {showError('password') && <div className="field-error">{errors.password}</div>}
+          {errors.password && (
+            <div id="password-error" className="field-error">{errors.password.message}</div>
+          )}
         </div>
 
+        {/* Confirm */}
         <div className="register-field">
           <label htmlFor="confirm">Confirm Password</label>
           <input
             id="confirm"
             type="password"
-            name="confirm"
-            value={form.confirm}
-            onChange={handleChange}
-            onBlur={handleBlur}
+            placeholder="Confirm password"
             autoComplete="new-password"
-            required
+            {...register("confirm", {
+              required: "Please confirm your password",
+              validate: (v) => v === getValues("password") || "Passwords do not match",
+            })}
+            className={errors.confirm ? "has-error" : undefined}
+            aria-invalid={!!errors.confirm}
+            aria-describedby={errors.confirm ? "confirm-error" : undefined}
           />
-          {showError('confirm') && <div className="field-error">{errors.confirm}</div>}
+          {errors.confirm && (
+            <div id="confirm-error" className="field-error">{errors.confirm.message}</div>
+          )}
         </div>
 
-        <button className="register-btn" type="submit" disabled={submitting}>
-          {submitting ? 'Creating…' : 'Sign Up'}
+        <button className="register-btn" type="submit" disabled={!isValid || isSubmitting}>
+          {isSubmitting ? "Creating…" : "Sign Up"}
         </button>
       </form>
 
@@ -275,5 +251,3 @@ function Register() {
     </main>
   );
 }
-
-export default Register;

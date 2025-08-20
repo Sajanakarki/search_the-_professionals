@@ -1,114 +1,139 @@
-import { useState } from 'react';
-import './login.css';
-import type { AxiosError, AxiosResponse } from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { loginApi } from '../../../shared/config/api';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import type { AxiosError } from "axios";
+import { loginApi } from "../../../shared/config/api"; 
+import "./login.css";
 
-function Login() {
-  const [form, setFormData] = useState({ username: '', password: '' });
+type FormValues = {
+  username: string;
+  password: string;
+};
 
+const NAME_REGEX = /^(?! )[A-Za-z ]{3,50}(?<! )$/;                   // letters+spaces, 3–50, no edge spaces
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^\w\s]).{8,}$/; // 8+, 1 letter, 1 number, 1 special
 
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
+export default function Login() {
   const navigate = useNavigate();
+  const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const {
+    register,
+    handleSubmit,
+    setError,
+    clearErrors,
+    formState: { errors, isValid, isSubmitting },
+  } = useForm<FormValues>({
+    mode: "onChange",
+    criteriaMode: "firstError",
+    defaultValues: { username: "", password: "" },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: FormValues) => {
+    try {
+      setBanner(null);
+      clearErrors();
 
-    
-    setSuccessMsg('');
-    setErrorMsg('');
+      const payload = {
+        username: data.username.replace(/\s+/g, " ").trim(),
+        password: data.password,
+      };
 
-    loginApi(form)
-      .then((res: AxiosResponse) => {
-        
-        const u = (res?.data?.user ?? res?.data ?? {}) as any;
-        u.role = (u.role || 'user').toString().toLowerCase();
+      const res = await loginApi(payload);
 
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('currentUser', JSON.stringify(u));
+      localStorage.setItem("token", res.data?.token || "");
+      localStorage.setItem("currentUser", JSON.stringify(res.data?.user || {}));
 
-        
-        setSuccessMsg('Login successful');
-        setErrorMsg('');
-        setTimeout(() => navigate('/home'), 800);
-      })
-      .catch((error: AxiosError<any>) => {
-        const status = error.response?.status;
+      navigate("/home");
+    } catch (err) {
+      const e = err as AxiosError<any>;
+      const msg =
+        e.response?.data?.message ||
+        (e.code === "ERR_NETWORK" ? "Cannot reach server. Is the backend running?" : "Login failed");
 
-        
-        if (status === 400 || status === 401) {
-          setErrorMsg("Username or password doesn't match");
-        } else {
-          const message =
-            error.response?.data?.message || 'Login failed. Please try again.';
-          setErrorMsg(message);
-        }
-        setSuccessMsg('');
-      });
+      setBanner({ type: "err", text: msg });
+
+      const lower = msg.toLowerCase();
+      if (lower.includes("user") || lower.includes("name")) {
+        setError("username", { message: msg }, { shouldFocus: true });
+      } else if (lower.includes("password")) {
+        setError("password", { message: msg }, { shouldFocus: true });
+      }
+    }
   };
 
   return (
-    <div className="login-wrapper">
-      <form className="login-card" onSubmit={handleSubmit}>
+    <main className="login-wrapper">
+      <form className="login-card" onSubmit={handleSubmit(onSubmit)} noValidate>
         <h2 className="login-title">Login</h2>
+        <p className="welcome-back">Welcome back, please login</p>
 
-        
-        {successMsg ? (
-          <div style={{ marginBottom: 12, color: '#0a7a28', background: '#e8f6ed', padding: '8px 10px', borderRadius: 6 }}>
-            {successMsg}
+        {banner && (
+          <div className={`alert ${banner.type === "ok" ? "alert-success" : "alert-error"}`} role="alert">
+            {banner.text}
           </div>
-        ) : null}
-        {errorMsg ? (
-          <div style={{ marginBottom: 12, color: '#af1f1f', background: '#fdecec', padding: '8px 10px', borderRadius: 6 }}>
-            {errorMsg}
-          </div>
-        ) : null}
+        )}
 
+        {/* Username */}
         <div className="login-field">
-          <label htmlFor="username" style={{ fontWeight: 'bold' }}>
-            Username:
-          </label>
+          <label htmlFor="username">Username</label>
           <input
             id="username"
             type="text"
-            name="username"
-            value={form.username}
-            onChange={handleChange}
-            required
+            placeholder="Name"
+            autoComplete="username"
+            {...register("username", {
+              required: "Username is required",
+              pattern: { value: NAME_REGEX, message: "Only letters & spaces (3–50 chars)" },
+              onChange: (e) => {
+                e.target.value = e.target.value
+                  .replace(/[^A-Za-z ]/g, "")
+                  .replace(/\s{2,}/g, " ")
+                  .slice(0, 50);
+              },
+            })}
+            className={errors.username ? "has-error" : undefined}
+            aria-invalid={!!errors.username}
+            aria-describedby={errors.username ? "username-error" : undefined}
           />
+          {errors.username && (
+            <div id="username-error" className="field-error">{errors.username.message}</div>
+          )}
         </div>
 
+        {/* Password */}
         <div className="login-field">
-          <label htmlFor="password" style={{ fontWeight: 'bold' }}>
-            Password:
-          </label>
+          <label htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            required
+            placeholder="Password"
+            autoComplete="current-password"
+            {...register("password", {
+              required: "Password is required",
+              pattern: {
+                value: PASSWORD_REGEX,
+                message: "Min 8, include a letter, a number and a special character",
+              },
+            })}
+            className={errors.password ? "has-error" : undefined}
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? "password-error" : undefined}
           />
+          {errors.password && (
+            <div id="password-error" className="field-error">{errors.password.message}</div>
+          )}
         </div>
 
-        <button className="login-btn" type="submit">
-          Sign In
+        <button className="login-btn" type="submit" disabled={!isValid || isSubmitting}>
+          {isSubmitting ? "Signing in…" : "Login"}
         </button>
-
-        <h4 style={{ textAlign: 'center', fontWeight: 'normal' }}>
-          Don&apos;t have an account? <a href="/register">Register</a>
-        </h4>
       </form>
-    </div>
+
+      <div className="login-alt">
+        <span>New here?</span>
+        <Link to="/register" className="alt-link">Create account</Link>
+      </div>
+    </main>
   );
 }
-
-export default Login;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./Homepage.css";
 import { getUserListApi } from "../../shared/config/api";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,68 +10,32 @@ interface User {
   avatarUrl?: string;
 }
 
-/** Inline CL brand badge*/
-function CLBadge() {
-  return (
-    <svg
-      className="cl-badge"
-      width="48"
-      height="48"
-      viewBox="0 0 48 48"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <defs>
-        <linearGradient id="clGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#8d6e63" />
-          <stop offset="100%" stopColor="#bcaaa4" />
-        </linearGradient>
-      </defs>
-      <circle cx="24" cy="24" r="22" fill="url(#clGrad)" />
-      <circle cx="24" cy="24" r="22" fill="none" stroke="#e8e1db" strokeWidth="1.5" />
-      <text
-        x="24"
-        y="28"
-        textAnchor="middle"
-        fontFamily="Segoe UI, system-ui, -apple-system, Roboto, Arial, sans-serif"
-        fontWeight="900"
-        fontSize="16"
-        fill="#ffffff"
-      >
-        CL
-      </text>
-    </svg>
-  );
-}
-
 export default function Homepage() {
+  // Users
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // Job hero fields
+  // Hero search
   const [jobTitle, setJobTitle] = useState("");
   const [location, setLocation] = useState("");
 
   const navigate = useNavigate();
 
-  // Remove any global overlays from other pages (keeps background uniform)
+  // clean any global overlays
   useEffect(() => {
     const style = document.createElement("style");
     style.id = "kill-global-overlays";
     style.textContent = `
       html::before, html::after,
-      body::before, body::after {
-        content: none !important;
-        display: none !important;
-      }
+      body::before, body::after { content: none !important; display: none !important; }
     `;
     document.head.appendChild(style);
     return () => document.getElementById("kill-global-overlays")?.remove();
   }, []);
 
-  // Load users
+  // load users
   useEffect(() => {
     setLoading(true);
     setErr(null);
@@ -80,20 +44,18 @@ export default function Homepage() {
         const list = Array.isArray(res.data?.users) ? res.data.users : [];
         setUsers(list);
       })
-      .catch((e) => {
-        console.error("Users API ERROR:", e?.response?.status, e?.response?.data || e.message);
+      .catch(() => {
         setErr("Could not load users");
         setUsers([]);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // Username-only filtering
-  const filteredUsers = search.trim()
-    ? users.filter((user) =>
-        user.username?.toLowerCase().includes(search.toLowerCase())
-      )
-    : users;
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => (u.username || "").toLowerCase().includes(q));
+  }, [users, search]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -104,28 +66,21 @@ export default function Homepage() {
     navigate(`/profile/${u._id}`, { state: { user: u } });
   };
 
-  // Navigate to jobs listing with query params (called when pressing Enter)
+  // /jobs?q=...&location=...
   const submitJobSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const title = jobTitle.trim().replace(/\s+/g, " ");
     const loc = location.trim().replace(/\s+/g, " ");
-    if (!title && !loc) return;
-
     const params = new URLSearchParams();
-    if (title) params.set("title", title);
+    if (title) params.set("q", title);
     if (loc) params.set("location", loc);
-
-    navigate(`/jobs?${params.toString()}`);
+    navigate(params.toString() ? `/jobs?${params}` : "/jobs");
   };
 
   return (
     <div className="homepage-container">
-      <div className="cl-fixed-badge">
-        <CLBadge />
-      </div>
-
       {/* Top Bar */}
-      <header className="top-bar" role="navigation" aria-label="Primary">
+      <header className="top-bar">
         <div className="nav-links">
           <Link to="/jobs">Job Listing</Link>
           <Link to="/about">About Us</Link>
@@ -135,116 +90,189 @@ export default function Homepage() {
           <Link to="/saved-jobs">Saved Jobs</Link>
           <Link to="/profile-settings">Profile Settings</Link>
         </div>
-        <button onClick={handleLogout} className="logout-button" aria-label="Logout">
-          Logout
-        </button>
+        <button onClick={handleLogout} className="logout-button">Logout</button>
       </header>
 
       {/* Welcome */}
-      <section className="welcome-section" aria-label="Welcome">
+      <section className="welcome-section">
         <div className="welcome-text">
           <h1 className="home-title">Welcome to CareerLink</h1>
           <p className="welcome-subtitle">Find your next career opportunity today.</p>
         </div>
       </section>
 
-      {/* Job Search Hero */}
-      <section className="job-hero" aria-label="Job search">
-        <form className="job-form no-button" onSubmit={submitJobSearch}>
-          <div className="field">
-            <label htmlFor="jobTitle">Job Title</label>
-            <div className="input-wrap">
-              <span className="input-icon" aria-hidden="true">
+      {/* Hero: search jobs */}
+      <section className="hero" aria-label="Job search hero">
+        <div className="hero-content">
+          <h1>Find your next role</h1>
+          <p className="muted">Search thousands of opportunities across Nepal & Remote.</p>
+
+          <form className="hero-form" onSubmit={submitJobSearch}>
+            <div className="hero-input">
+              <span className="input-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-1.41 1.41l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"
-                  />
+                  <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-1.41 1.41l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
                 </svg>
               </span>
               <input
                 id="jobTitle"
-                type="text"
                 className="job-input with-icon"
-                placeholder="e.g., Software Engineer"
+                type="text"
+                placeholder="Job title or keywords (e.g., React, .NET)"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
                 autoComplete="off"
-                inputMode="search"
-                enterKeyHint="search"
               />
             </div>
-          </div>
 
-          <div className="field">
-            <label htmlFor="loc">Location</label>
-            <div className="input-wrap">
-              <span className="input-icon" aria-hidden="true">
+            <div className="hero-input">
+              <span className="input-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z"
-                  />
+                  <path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z"/>
                 </svg>
               </span>
               <input
                 id="loc"
-                type="text"
                 className="job-input with-icon"
-                placeholder="e.g., Kathmandu or Remote"
+                type="text"
+                placeholder="Location (e.g., Kathmandu or Remote)"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 autoComplete="off"
-                enterKeyHint="search"
               />
             </div>
+
+            <button type="submit" className="btn">Search</button>
+          </form>
+
+          {/* quick chips */}
+          <div className="quick-filters">
+            <span className="muted">Popular:</span>
+            <Link to="/jobs?q=Frontend">Frontend</Link>
+            <Link to="/jobs?q=Backend">Backend</Link>
+            <Link to="/jobs?q=QA">QA</Link>
+            <Link to="/jobs?type=internship">Internships</Link>
+            <Link to="/jobs?location=Remote">Remote</Link>
           </div>
-        </form>
+        </div>
       </section>
 
-      {/* User directory search */}
-      <section className="search-section" aria-label="Search users">
-        <input
-          type="text"
-          placeholder="Search users by name"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-bar"
-          aria-label="Search users by name"
-        />
-        {!loading && !err && (
-          <div className="result-count">{filteredUsers.length} users found</div>
-        )}
+      {/* Categories */}
+      <section className="categories">
+        <div className="section-head">
+          <h2>Browse by category</h2>
+        </div>
+        <div className="cat-grid">
+          <Link className="cat" to="/jobs?q=Software">IT & Software</Link>
+          <Link className="cat" to="/jobs?q=Accounting">Finance & Accounting</Link>
+          <Link className="cat" to="/jobs?q=Marketing">Marketing</Link>
+          <Link className="cat" to="/jobs?q=Design">Design & Creative</Link>
+          <Link className="cat" to="/jobs?q=Operations">Operations</Link>
+          <Link className="cat" to="/jobs?q=Customer">Customer Support</Link>
+        </div>
       </section>
 
-      
-      <main>
-        {loading && <p className="center-text">Loading users…</p>}
-        {err && !loading && <p className="center-text error">{err}</p>}
+      {/* Featured jobs (static examples) */}
+      <section className="featured">
+        <div className="section-head">
+          <h2>Featured jobs</h2>
+          <Link className="see-all" to="/jobs">See all</Link>
+        </div>
+
+        <div className="job-grid">
+          <article className="job-card">
+            <header>
+              <h3><Link to="/jobs?q=React">React Frontend Developer</Link></h3>
+              <p className="muted">Orva Tech • Kathmandu • Full-time</p>
+            </header>
+            <ul className="tag-row">
+              <li className="tag">React</li><li className="tag">TypeScript</li><li className="tag">Vite</li>
+            </ul>
+            <footer className="job-actions">
+              <Link className="btn" to="/jobs?q=React">View</Link>
+              <Link className="btn ghost" to="/saved-jobs">Save</Link>
+            </footer>
+          </article>
+
+          <article className="job-card">
+            <header>
+              <h3><Link to="/jobs?q=Node">Node.js Backend Engineer</Link></h3>
+              <p className="muted">Himalaya Labs • Lalitpur • Contract</p>
+            </header>
+            <ul className="tag-row">
+              <li className="tag">Node</li><li className="tag">MongoDB</li><li className="tag">REST</li>
+            </ul>
+            <footer className="job-actions">
+              <Link className="btn" to="/jobs?q=Node">View</Link>
+              <Link className="btn ghost" to="/saved-jobs">Save</Link>
+            </footer>
+          </article>
+
+          <article className="job-card">
+            <header>
+              <h3><Link to="/jobs?q=QA">QA Engineer</Link></h3>
+              <p className="muted">CloudNine • Remote • Full-time</p>
+            </header>
+            <ul className="tag-row">
+              <li className="tag">Cypress</li><li className="tag">Playwright</li><li className="tag">API</li>
+            </ul>
+            <footer className="job-actions">
+              <Link className="btn" to="/jobs?q=QA">View</Link>
+              <Link className="btn ghost" to="/saved-jobs">Save</Link>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      {/* Users */}
+      <section className="people" aria-label="People directory">
+        <div className="section-head">
+          <h2>People</h2>
+          {!loading && !err && <span className="pill-count">{filteredUsers.length}</span>}
+        </div>
+
+        {/* search bar for users */}
+        <div className="search-row">
+          <div className="search-wrap">
+            <span className="search-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-1.41 1.41l.27.28v.79l5 4.99L20.49 19zM9.5 14A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
+              </svg>
+            </span>
+            <input
+              className="search-bar with-icon"
+              placeholder="Search users by name"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </div>
+
+        {loading && <p className="center-text muted-text">Loading users…</p>}
+        {err && <p className="center-text error">{err}</p>}
 
         {!loading && !err && (
-          <section className="user-cards" aria-live="polite">
+          <div className="user-cards" aria-live="polite">
             {filteredUsers.length === 0 ? (
-              <p className="center-text muted">0 users found</p>
+              <p className="center-text muted-text">0 users found</p>
             ) : (
-              filteredUsers.map((user) => (
-                <article key={user._id} className="user-card">
+              filteredUsers.map((u) => (
+                <article key={u._id} className="user-card">
                   <div className="card-head">
-                    <div className="avatar-initial" aria-hidden="true">
-                      {user.username?.[0]?.toUpperCase() || "U"}
-                    </div>
+                    <div className="avatar-initial">{u.username?.[0]?.toUpperCase() || "U"}</div>
                     <div>
-                      <h3 title={user.username}>{user.username}</h3>
-                      <p>{user.email || "No email provided"}</p>
+                      <h3 title={u.username}>{u.username}</h3>
+                      <p>{u.email || "No email provided"}</p>
                     </div>
                   </div>
-                  <button onClick={() => openProfile(user)}>View Profile</button>
+                  <button className="btn" onClick={() => openProfile(u)}>View Profile</button>
                 </article>
               ))
             )}
-          </section>
+          </div>
         )}
-      </main>
+      </section>
     </div>
   );
 }

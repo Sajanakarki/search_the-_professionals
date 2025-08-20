@@ -1,10 +1,8 @@
-
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-
 
 body {
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -25,7 +23,6 @@ body {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-
 
 body::before,
 body::after {
@@ -55,7 +52,6 @@ body::after {
   50% { transform: translateY(40px) scale(1.05); }
 }
 
-
 .login-wrapper {
   display: flex;
   background-color: #ffffff;
@@ -71,7 +67,6 @@ body::after {
   z-index: 2;
 }
 
-
 @keyframes slideUp {
   from {
     transform: translateY(40px);
@@ -82,7 +77,6 @@ body::after {
     opacity: 1;
   }
 }
-
 
 .login-card h2 {
   text-align: center;
@@ -130,6 +124,21 @@ body::after {
   box-shadow: 0 0 0 4px rgba(161, 136, 127, 0.2);
 }
 
+/* Error styling */
+.input-error {
+  border-color: #e53935 !important;
+  background: #fffafa;
+}
+.error-text {
+  font-size: 13px;
+  color: #e53935;
+  margin-top: 6px;
+  margin-left: 5px;
+}
+.server-error {
+  text-align: center;
+  margin-bottom: 10px;
+}
 
 .login-btn {
   width: 100%;
@@ -169,36 +178,33 @@ body::after {
   background: linear-gradient(to right, #c57b57, #6b3e26);
 }
 
-
-.login-card h4 {
+/* Footer alternative link */
+.alt-text {
   text-align: center;
   font-size: 14px;
   color: #5e5e5e;
   font-weight: normal;
   margin-top: 25px;
+  font-family: inherit;
 }
-
-.login-card h4 a {
+.alt-text .alt-link {
   color: #4E342E;
+  font-weight: 700;
   text-decoration: none;
-  font-weight: 600;
+  font-family: inherit;
 }
-
-.login-card h4 a:hover {
+.alt-text .alt-link:hover {
   text-decoration: underline;
 }
-
 
 @media (max-width: 600px) {
   .login-wrapper {
     padding: 30px 20px;
     max-width: 90%;
   }
-
   .login-card h2 {
     font-size: 2.2rem;
   }
-
   .login-btn {
     font-size: 16px;
   }
