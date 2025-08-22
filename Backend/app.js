@@ -16,11 +16,10 @@ app.use(
   })
 );
 
-// allow big-ish payloads for profile forms
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// optional debug: confirm Cloudinary envs are loaded
 app.get("/api/_cloudinary-check", (_req, res) => {
   res.json({
     CLOUDINARY_CLOUD_NAME: !!process.env.CLOUDINARY_CLOUD_NAME,

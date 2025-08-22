@@ -39,7 +39,9 @@ export async function searchUsers(req, res) {
 
 export async function getUserProfile(req, res) {
   try {
-    const user = await User.findById(req.params.id).select("-password -__v").lean({ virtuals: true });
+    const user = await User.findById(req.params.id)
+      .select("+education +experience -password -__v")
+      .lean({ virtuals: true });
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (err) {
@@ -65,7 +67,6 @@ export async function updateUserProfile(req, res) {
       "skills",
       "certifications",
       "certificates",
-      // if you want to allow arrays too, add:
       "experienceItems",
       "educationItems",
     ]);
@@ -122,7 +123,7 @@ export async function updateUserProfile(req, res) {
       new: true,
       runValidators: true,
     })
-      .select("-password -__v")
+      .select("+education +experience -password -__v")
       .lean({ virtuals: true });
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -132,7 +133,6 @@ export async function updateUserProfile(req, res) {
   }
 }
 
-/* Arrays diff endpoint (skills/certifications) stays as you had */
 export async function updateUserArrays(req, res) {
   try {
     const {
@@ -164,7 +164,7 @@ export async function updateUserArrays(req, res) {
       new: true,
       runValidators: true,
     })
-      .select("-password -__v")
+      .select("+education +experience -password -__v")
       .lean({ virtuals: true });
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -174,7 +174,6 @@ export async function updateUserArrays(req, res) {
   }
 }
 
-/* Experience CRUD (unchanged from yours) */
 export async function addExperienceItem(req, res) {
   try {
     const user = await User.findById(req.params.id);
@@ -191,12 +190,13 @@ export async function addExperienceItem(req, res) {
     });
 
     await user.save();
-    const fresh = await User.findById(req.params.id).select("-password -__v").lean({ virtuals: true });
+    const fresh = await User.findById(req.params.id).select("+education +experience -password -__v").lean({ virtuals: true });
     res.json(fresh);
   } catch (err) {
     res.status(500).json({ message: err.message || "Failed to add experience" });
   }
 }
+
 export async function updateExperienceItem(req, res) {
   try {
     const { id, expId } = req.params;
@@ -221,12 +221,13 @@ export async function updateExperienceItem(req, res) {
     });
 
     await user.save();
-    const fresh = await User.findById(id).select("-password -__v").lean({ virtuals: true });
+    const fresh = await User.findById(id).select("+education +experience -password -__v").lean({ virtuals: true });
     res.json(fresh);
   } catch (err) {
     res.status(500).json({ message: err.message || "Failed to update experience" });
   }
 }
+
 export async function deleteExperienceItem(req, res) {
   try {
     const { id, expId } = req.params;
@@ -238,14 +239,13 @@ export async function deleteExperienceItem(req, res) {
 
     item.deleteOne();
     await user.save();
-    const fresh = await User.findById(id).select("-password -__v").lean({ virtuals: true });
+    const fresh = await User.findById(id).select("+education +experience -password -__v").lean({ virtuals: true });
     res.json(fresh);
   } catch (err) {
     res.status(500).json({ message: err.message || "Failed to delete experience" });
   }
 }
 
-/* Education CRUD (unchanged from yours) */
 export async function addEducationItem(req, res) {
   try {
     const user = await User.findById(req.params.id);
@@ -261,12 +261,13 @@ export async function addEducationItem(req, res) {
     });
 
     await user.save();
-    const fresh = await User.findById(req.params.id).select("-password -__v").lean({ virtuals: true });
+    const fresh = await User.findById(req.params.id).select("+education +experience -password -__v").lean({ virtuals: true });
     res.json(fresh);
   } catch (err) {
     res.status(500).json({ message: err.message || "Failed to add education" });
   }
 }
+
 export async function updateEducationItem(req, res) {
   try {
     const { id, eduId } = req.params;
@@ -290,12 +291,13 @@ export async function updateEducationItem(req, res) {
     });
 
     await user.save();
-    const fresh = await User.findById(id).select("-password -__v").lean({ virtuals: true });
+    const fresh = await User.findById(id).select("+education +experience -password -__v").lean({ virtuals: true });
     res.json(fresh);
   } catch (err) {
     res.status(500).json({ message: err.message || "Failed to update education" });
   }
 }
+
 export async function deleteEducationItem(req, res) {
   try {
     const { id, eduId } = req.params;
@@ -307,7 +309,7 @@ export async function deleteEducationItem(req, res) {
 
     item.deleteOne();
     await user.save();
-    const fresh = await User.findById(id).select("-password -__v").lean({ virtuals: true });
+    const fresh = await User.findById(id).select("+education +experience -password -__v").lean({ virtuals: true });
     res.json(fresh);
   } catch (err) {
     res.status(500).json({ message: err.message || "Failed to delete education" });

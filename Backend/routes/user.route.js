@@ -11,6 +11,7 @@ import {
   addEducationItem,
   updateEducationItem,
   deleteEducationItem,
+  getProfileOptions,
 } from "../Controller/user.controller.js";
 
 import { upload } from "../middleware/image-uploader.middleware.js";
@@ -22,6 +23,7 @@ const router = Router();
 router.get("/userslist", getUserList);
 router.get("/search", searchUsers);
 router.get("/profile/:id", getUserProfile);
+router.get("/options", getProfileOptions);
 
 /* Profile updates */
 router.patch("/profile/:id", updateUserProfile);

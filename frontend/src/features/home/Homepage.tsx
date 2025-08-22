@@ -23,7 +23,6 @@ export default function Homepage() {
 
   const navigate = useNavigate();
 
-  // clean any global overlays
   useEffect(() => {
     const style = document.createElement("style");
     style.id = "kill-global-overlays";
@@ -44,7 +43,8 @@ export default function Homepage() {
         const list = Array.isArray(res.data?.users) ? res.data.users : [];
         setUsers(list);
       })
-      .catch(() => {
+      .catch((e) => {
+        console.error("Users API error:", e?.response?.status, e?.response?.data || e);
         setErr("Could not load users");
         setUsers([]);
       })
@@ -172,7 +172,7 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Featured jobs (static examples) */}
+      {/* Featured jobs */}
       <section className="featured">
         <div className="section-head">
           <h2>Featured jobs</h2>
@@ -260,7 +260,27 @@ export default function Homepage() {
               filteredUsers.map((u) => (
                 <article key={u._id} className="user-card">
                   <div className="card-head">
-                    <div className="avatar-initial">{u.username?.[0]?.toUpperCase() || "U"}</div>
+                    {u.avatarUrl ? (
+                      <img
+                        src={u.avatarUrl}
+                        alt={u.username}
+                        className="avatar-img"
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                        onError={(e) => {
+                          // graceful fallback in case of broken URL
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="avatar-initial">{u.username?.[0]?.toUpperCase() || "U"}</div>
+                    )}
+
                     <div>
                       <h3 title={u.username}>{u.username}</h3>
                       <p>{u.email || "No email provided"}</p>
