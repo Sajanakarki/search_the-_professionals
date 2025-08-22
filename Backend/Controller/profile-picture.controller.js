@@ -1,35 +1,30 @@
 import User from "../models/user.model.js";
 import { uploadBufferToCloudinary } from "../middleware/image-uploader.middleware.js";
-import cloudinary from "../config/cloudinary.config.js";
 
 export async function uploadProfilePic(req, res) {
-    try {
-        if (!req.file) throw new Error ('No file upload');
-    
-        const result = await uploadBufferToCloudinary(req.file.buffer, {
-            folder: 'profilepic',
-            public_id: `user_${req.user.id}`,
-            transformation: [
-                {width :1600, height: 1600, crop: 'fill', gravity: 'auto'},
-                {quality: 'auto', fetch_fomat:'auto'} ,
+  try {
+    const userId = req.params.id || (req.user && req.user.id);
+    if (!userId) return res.status(400).json({ success: false, message: "Missing user id" });
+    if (!req.file?.buffer) return res.status(400).json({ success: false, message: "No file uploaded" });
 
-            ],
-        });
+    const result = await uploadBufferToCloudinary(req.file.buffer, {
+      folder: "profilepic",
+      public_id: `user_${userId}_${Date.now()}`,
+      transformation: [
+        { width: 1600, height: 1600, crop: "fill", gravity: "auto" },
+        { quality: "auto", fetch_format: "auto" },
+      ],
+    });
 
-        // Save image details to MongoDB
-        const user = await User.findByIdAndUpdate(
-            req.user.id,
-            {
-                profilePicture: {
-                    url: result.secure_url,
-                    public_id: result.public_id
-                }
-            },
-            {new: true }
-        );
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { avatarUrl: result.secure_url, avatarId: result.public_id } },
+      { new: true, select: "-password" }
+    );
 
-        res.json({ success: true, image: user.profilePictute });
-    } catch (e) {
-        res.status(400).jscon({ success: false,message: e.message});
-    }
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    return res.json({ success: true, avatarUrl: user.avatarUrl, user });
+  } catch (e) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
 }

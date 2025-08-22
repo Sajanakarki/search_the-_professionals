@@ -95,6 +95,26 @@ body::after {
   letter-spacing: 0.3px;
 }
 
+/*Success / Error Banners */
+.alert {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+.alert-success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+.alert-error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
 .login-field {
   margin-bottom: 22px;
 }
@@ -124,7 +144,7 @@ body::after {
   box-shadow: 0 0 0 4px rgba(161, 136, 127, 0.2);
 }
 
-/* Error styling */
+/* Error styling for inputs */
 .input-error {
   border-color: #e53935 !important;
   background: #fffafa;
@@ -140,6 +160,7 @@ body::after {
   margin-bottom: 10px;
 }
 
+/* Login button */
 .login-btn {
   width: 100%;
   margin-top: 15px;
@@ -178,8 +199,7 @@ body::after {
   background: linear-gradient(to right, #c57b57, #6b3e26);
 }
 
-/* Footer alternative link */
-.alt-text {
+.login-alt {
   text-align: center;
   font-size: 14px;
   color: #5e5e5e;
@@ -187,14 +207,18 @@ body::after {
   margin-top: 25px;
   font-family: inherit;
 }
-.alt-text .alt-link {
-  color: #4E342E;
+
+.login-alt .alt-link {
+  color: #4E342E;        
   font-weight: 700;
   text-decoration: none;
   font-family: inherit;
+  transition: color 0.2s ease;
 }
-.alt-text .alt-link:hover {
+
+.login-alt .alt-link:hover {
   text-decoration: underline;
+  color: #6D4C41;         
 }
 
 @media (max-width: 600px) {

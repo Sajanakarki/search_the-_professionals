@@ -1,6 +1,5 @@
 import { Router } from "express";
 import {
-  
   getUserList,
   searchUsers,
   getUserProfile,
@@ -14,63 +13,31 @@ import {
   deleteEducationItem,
 } from "../Controller/user.controller.js";
 
+import { upload } from "../middleware/image-uploader.middleware.js";
+import { uploadProfilePic } from "../Controller/profile-picture.controller.js";
+
 const router = Router();
 
-/* ========== Public ========== */
+/* Public */
 router.get("/userslist", getUserList);
 router.get("/search", searchUsers);
-router.get("/user/profile/:id", getUserProfile);
+router.get("/profile/:id", getUserProfile);
 
-/* ========== Owner-only edits (add guard when ready) ========== */
-router.patch("/user/profile/:id", /* ...guard, */ updateUserProfile);
-router.patch("/user/profile/:id/arrays", /* ...guard, */ updateUserArrays);
+/* Profile updates */
+router.patch("/profile/:id", updateUserProfile);
+router.patch("/profile/:id/arrays", updateUserArrays);
 
-/* Experience */
-router.post("/user/profile/:id/experience", /* ...guard, */ addExperienceItem);
-router.put(
-  "/user/profile/:id/experience/:expId",
-  /* ...guard, */ updateExperienceItem
-);
-router.delete(
-  "/user/profile/:id/experience/:expId",
-  /* ...guard, */ deleteExperienceItem
-);
+/* Profile photo upload */
+router.post("/profile/:id/photo", upload.single("file"), uploadProfilePic);
 
-/* Education */
-router.post("/user/profile/:id/education", addEducationItem);
-router.put(
-  "/user/profile/:id/education/:eduId",
-   updateEducationItem
-);
-router.delete(
-  "/user/profile/:id/education/:eduId",
-  /* ...guard, */ deleteEducationItem
-);
+/* Experience items */
+router.post("/profile/:id/experience", addExperienceItem);
+router.put("/profile/:id/experience/:expId", updateExperienceItem);
+router.delete("/profile/:id/experience/:expId", deleteExperienceItem);
 
+/* Education items */
+router.post("/profile/:id/education", addEducationItem);
+router.put("/profile/:id/education/:eduId", updateEducationItem);
+router.delete("/profile/:id/education/:eduId", deleteEducationItem);
 
 export default router;
-
-
-
-// user.route.js
-//import {Router} from 'express';
-//const router = Router();
-//import User from"../models/user.model.js";
-//import { getUserList, searchUsers } from '../Controller/user.controller.js';
-
-
-//router.get('/userslist', getUserList);
-//router.get('/search', searchUsers);
-
-// GET all users
-//router.get('/userslist', async (req, res) => {
-  //try {
-    //const users = await User.find(); // Fetch all users from DB
-    //res.json(users);
-  //} catch (err) {
-    //res.status(500).json({ message: err.message });
-  //}
-//});
-
-//export default router;
-

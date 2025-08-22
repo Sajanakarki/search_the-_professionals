@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import type { AxiosError } from "axios";
-import { registerApi, loginApi } from "../../../shared/config/api";
+import { registerApi } from "../../../shared/config/api";
 import "./resgister.css";
 
 type FormValues = {
   username: string;
   email: string;
-  phone: string;         // collected for UI; not sent (your backend expects only 3 fields)
-  locationText: string;  // collected for UI; not sent
+  phone: string;
+  locationText: string;
   password: string;
   confirm: string;
 };
@@ -49,46 +49,44 @@ export default function Register() {
       setBanner(null);
       clearErrors();
 
-      // Type payload EXACTLY as registerApi expects to avoid TS inference errors
-      const payload: Parameters<typeof registerApi>[0] = {
+      const payload = {
         username: data.username.replace(/\s+/g, " ").trim(),
         email: data.email.trim().toLowerCase(),
         password: data.password,
+        phone: (data.phone || "").trim(),
+        locationText: (data.locationText || "").trim(),
       };
 
-      // 1) Register
+      // Register only
       await registerApi(payload);
 
-      // 2) Auto-login (your backend logs in with username + password)
-      const loginRes = await loginApi({
-        username: payload.username,
-        password: payload.password,
-      });
+      // Show success banner and delay redirect so user can see it
+      setBanner({ type: "ok", text: "Account created successfully! Redirecting to login..." });
 
-      // 3) Persist & go home
-      const u = (loginRes?.data?.user ?? loginRes?.data ?? {}) as any;
-      u.role = (u.role || "user").toString().toLowerCase();
-
-      localStorage.setItem("token", loginRes.data.token);
-      localStorage.setItem("currentUser", JSON.stringify(u));
-
-      navigate("/home");
+      setTimeout(() => {
+        // pass username so Login can prefill
+        navigate("/login", { state: { justRegistered: true, username: payload.username } });
+      }, 2000);
     } catch (err) {
       const e = err as AxiosError<any>;
-      const msg = e.response?.data?.message || "Registration failed. Please try again.";
-      setBanner({ type: "err", text: msg });
+      // Log real backend error to Console → Network tab + this log helps you debug
+      console.log("REGISTER_ERROR:", e.response?.data);
 
-      // Attach error to a likely field for better UX
-      const lower = msg.toLowerCase();
-      if (lower.includes("name") || lower.includes("user")) {
-        setError("username", { message: msg }, { shouldFocus: true });
-      } else if (lower.includes("mail")) {
-        setError("email", { message: msg }, { shouldFocus: true });
-      } else if (lower.includes("password")) {
-        setError("password", { message: msg }, { shouldFocus: true });
-      } else {
-        setError("confirm", { message: msg }, { shouldFocus: true });
-      }
+      const msg =
+        e.response?.data?.message ||
+        e.response?.data?.error ||
+        e.response?.data ||
+        "Registration failed. Please try again.";
+
+      setBanner({ type: "err", text: String(msg) });
+
+      // Map server error to a field for better UX
+      const lower = String(msg).toLowerCase();
+      if (lower.includes("phone")) setError("phone", { message: String(msg) }, { shouldFocus: true });
+      else if (lower.includes("location")) setError("locationText", { message: String(msg) }, { shouldFocus: true });
+      else if (lower.includes("name") || lower.includes("user")) setError("username", { message: String(msg) }, { shouldFocus: true });
+      else if (lower.includes("mail")) setError("email", { message: String(msg) }, { shouldFocus: true });
+      else if (lower.includes("password")) setError("password", { message: String(msg) }, { shouldFocus: true });
     }
   };
 
@@ -116,7 +114,7 @@ export default function Register() {
               pattern: { value: NAME_REGEX, message: "Only letters & spaces (3–50 chars)" },
               onChange: (e) => {
                 e.target.value = e.target.value
-                  .replace(/[^A-Za-z ]/g, "")
+                  .replace(/[^A-Za-z ]/g, "") // letters + spaces only
                   .replace(/\s{2,}/g, " ")
                   .slice(0, 50);
               },
@@ -125,9 +123,7 @@ export default function Register() {
             aria-invalid={!!errors.username}
             aria-describedby={errors.username ? "username-error" : undefined}
           />
-          {errors.username && (
-            <div id="username-error" className="field-error">{errors.username.message}</div>
-          )}
+          {errors.username && <div id="username-error" className="field-error">{errors.username.message}</div>}
         </div>
 
         {/* Email */}
@@ -147,12 +143,10 @@ export default function Register() {
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "email-error" : undefined}
           />
-          {errors.email && (
-            <div id="email-error" className="field-error">{errors.email.message}</div>
-          )}
+          {errors.email && <div id="email-error" className="field-error">{errors.email.message}</div>}
         </div>
 
-        {/* Phone (client-side only) */}
+        {/* Phone */}
         <div className="register-field">
           <label htmlFor="phone">Phone</label>
           <input
@@ -169,12 +163,10 @@ export default function Register() {
             aria-invalid={!!errors.phone}
             aria-describedby={errors.phone ? "phone-error" : undefined}
           />
-          {errors.phone && (
-            <div id="phone-error" className="field-error">{errors.phone.message}</div>
-          )}
+          {errors.phone && <div id="phone-error" className="field-error">{errors.phone.message}</div>}
         </div>
 
-        {/* Location (client-side only) */}
+        {/* Location */}
         <div className="register-field">
           <label htmlFor="locationText">Location</label>
           <input
@@ -189,9 +181,7 @@ export default function Register() {
             aria-invalid={!!errors.locationText}
             aria-describedby={errors.locationText ? "location-error" : undefined}
           />
-          {errors.locationText && (
-            <div id="location-error" className="field-error">{errors.locationText.message}</div>
-          )}
+          {errors.locationText && <div id="location-error" className="field-error">{errors.locationText.message}</div>}
         </div>
 
         {/* Password */}
@@ -213,9 +203,7 @@ export default function Register() {
             aria-invalid={!!errors.password}
             aria-describedby={errors.password ? "password-error" : undefined}
           />
-          {errors.password && (
-            <div id="password-error" className="field-error">{errors.password.message}</div>
-          )}
+          {errors.password && <div id="password-error" className="field-error">{errors.password.message}</div>}
         </div>
 
         {/* Confirm */}
@@ -234,9 +222,7 @@ export default function Register() {
             aria-invalid={!!errors.confirm}
             aria-describedby={errors.confirm ? "confirm-error" : undefined}
           />
-          {errors.confirm && (
-            <div id="confirm-error" className="field-error">{errors.confirm.message}</div>
-          )}
+          {errors.confirm && <div id="confirm-error" className="field-error">{errors.confirm.message}</div>}
         </div>
 
         <button className="register-btn" type="submit" disabled={!isValid || isSubmitting}>

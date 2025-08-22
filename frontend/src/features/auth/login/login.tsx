@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import type { AxiosError } from "axios";
-import { loginApi } from "../../../shared/config/api"; 
+import { loginApi } from "../../../shared/config/api";
 import "./login.css";
 
 type FormValues = {
@@ -10,11 +10,14 @@ type FormValues = {
   password: string;
 };
 
-const NAME_REGEX = /^(?! )[A-Za-z ]{3,50}(?<! )$/;                   // letters+spaces, 3–50, no edge spaces
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^\w\s]).{8,}$/; // 8+, 1 letter, 1 number, 1 special
+// rule : letters + spaces, 3–50, no leading/trailing space
+const NAME_REGEX = /^(?! )[A-Za-z ]{3,50}(?<! )$/;
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^\w\s]).{8,}$/;
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation() as any;
+
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const {
@@ -22,12 +25,30 @@ export default function Login() {
     handleSubmit,
     setError,
     clearErrors,
+    setValue,
     formState: { errors, isValid, isSubmitting },
   } = useForm<FormValues>({
     mode: "onChange",
     criteriaMode: "firstError",
     defaultValues: { username: "", password: "" },
   });
+
+  useEffect(() => {
+    const justRegistered: boolean | undefined = location?.state?.justRegistered;
+    const prefillUsername: string | undefined = location?.state?.username;
+
+    if (justRegistered) {
+      setBanner({ type: "ok", text: "Account created successfully. Please log in." });
+    }
+    if (prefillUsername) {
+      setValue("username", prefillUsername, { shouldValidate: true });
+    }
+
+    // clear state so refresh doesn’t repeat banner
+    if (justRegistered || prefillUsername) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, []);
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -41,10 +62,13 @@ export default function Login() {
 
       const res = await loginApi(payload);
 
+      // persist auth
       localStorage.setItem("token", res.data?.token || "");
       localStorage.setItem("currentUser", JSON.stringify(res.data?.user || {}));
 
-      navigate("/home");
+      // show success on Login, then redirect
+      setBanner({ type: "ok", text: "Logged in successfully. Redirecting to Home..." });
+      setTimeout(() => navigate("/home"), 1500);
     } catch (err) {
       const e = err as AxiosError<any>;
       const msg =
@@ -80,7 +104,7 @@ export default function Login() {
           <input
             id="username"
             type="text"
-            placeholder="Name"
+            placeholder="Your username"
             autoComplete="username"
             {...register("username", {
               required: "Username is required",
@@ -131,7 +155,7 @@ export default function Login() {
       </form>
 
       <div className="login-alt">
-        <span>New here?</span>
+        <span>New here?</span>{" "}
         <Link to="/register" className="alt-link">Create account</Link>
       </div>
     </main>
