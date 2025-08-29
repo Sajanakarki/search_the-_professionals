@@ -1,5 +1,6 @@
 import axiosInstance from "./axiosinstance";
 
+/* ---------- Auth ---------- */
 export type RegisterBody = {
   email: string;
   username: string;
@@ -7,46 +8,65 @@ export type RegisterBody = {
   phone: string;
   locationText: string;
 };
-
 export type LoginBody = { username: string; password: string };
 
-/** ===== Auth ===== */
 export const registerApi = (data: RegisterBody) =>
   axiosInstance.post("/auth/register", data);
 
 export const loginApi = (data: LoginBody) =>
   axiosInstance.post("/auth/login", data);
 
-export const getUserByIdApi = (id: string) =>
-  axiosInstance.get(`/user/profile/${id}`);
-
-export const getUserByUsernameApi = (username: string) =>
-  axiosInstance.get(`/user/username/${encodeURIComponent(username)}`); 
-
-export const getUserListApi = () =>
-  axiosInstance.get("/user/userslist");
+/* ---------- Users / Profiles ---------- */
+export const getUserListApi = () => axiosInstance.get("/user/userslist");
 
 export const getUserProfile = (id: string) =>
-  axiosInstance.get(`/user/profile/${id}`);
+  axiosInstance.get(`/user/profile/${id}`, { params: { _: Date.now() } });
 
-export const patchUserProfile = (id: string, payload: any) =>
+export const getProfileOptionsApi = () =>
+  axiosInstance.get("/user/options");
+
+/* ---------- Edit Profile: basic fields ---------- */
+export type UpdateUserProfilePayload = {
+  phone?: string;
+  locationText?: string;
+  title?: string;
+  summary?: string;
+  avatarUrl?: string;
+  hourlyRate?: number | ""; // "" clears on server
+  availability?: string;    // "" clears
+  jobType?: string;         // "" clears
+  education?: string;
+  experience?: string;
+};
+
+export const updateUserProfileApi = (id: string, payload: UpdateUserProfilePayload) =>
   axiosInstance.patch(`/user/profile/${id}`, payload);
 
-export const patchUserArrays = (
-  id: string,
-  payload: {
-    addCertificates?: string[];
-    removeCertificates?: string[];
-    addSkills?: string[];
-    removeSkills?: string[];
-  }
-) => axiosInstance.patch(`/user/profile/${id}/arrays`, payload);
+/* Keep your old name too (alias) */
+export const patchUserProfile = updateUserProfileApi;
 
-/** ===== Profile Photo ===== */
-export const uploadAvatarApi = (id: string, file: File) => {
+/* ---------- Edit Profile: arrays ---------- */
+export type UpdateUserArraysPayload = {
+  addCertificates?: string[];
+  removeCertificates?: string[];
+  addSkills?: string[];
+  removeSkills?: string[];
+};
+
+export const updateUserArraysApi = (id: string, payload: UpdateUserArraysPayload) =>
+  axiosInstance.patch(`/user/profile/${id}/arrays`, payload);
+
+/* Alias for compatibility */
+export const patchUserArrays = updateUserArraysApi;
+
+/* ---------- Profile Photo ---------- */
+export const uploadProfilePhotoApi = (id: string, file: File) => {
   const fd = new FormData();
-  fd.append("file", file); // key MUST be "file" to match upload.single("file")
+  fd.append("file", file);
   return axiosInstance.post(`/user/profile/${id}/photo`, fd, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 };
+
+/* Alias */
+export const uploadAvatarApi = uploadProfilePhotoApi;

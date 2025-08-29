@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getUserProfile } from "../../shared/config/api";
 import "./profile.css";
 
@@ -11,6 +11,7 @@ type UserProfile = {
   address?: string;
   education?: string;
   certificates?: string[];
+  certifications?: string[]; 
   experience?: string;
   skills?: string[];
   avatarUrl?: string;
@@ -25,11 +26,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { id: paramId } = useParams<{ id: string }>();
 
-  const location = useLocation() as { state?: { user?: Partial<UserProfile> } };
-  const stateUser = (location.state?.user as UserProfile) || null;
-
   const userId = useMemo(() => {
-    if (stateUser?._id) return stateUser._id;
     if (paramId) return paramId;
     try {
       const raw = localStorage.getItem("currentUser");
@@ -37,28 +34,27 @@ export default function Profile() {
     } catch {
       return undefined;
     }
-  }, [stateUser?._id, paramId]);
+  }, [paramId]);
 
-  const [data, setData] = useState<UserProfile | null>(stateUser);
-  const [loading, setLoading] = useState<boolean>(!stateUser);
+  const [data, setData] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId === undefined) navigate("/home", { replace: true });
-  }, [userId, navigate]);
-
-  useEffect(() => {
-    if (!userId || stateUser) return;
+    if (!userId) {
+      navigate("/home", { replace: true });
+      return;
+    }
     setLoading(true);
     setError(null);
     getUserProfile(userId)
       .then((r) => setData(r.data as UserProfile))
       .catch(() => setError("Failed to load profile."))
       .finally(() => setLoading(false));
-  }, [userId, stateUser]);
+  }, [userId, navigate]);
 
   const goHome = () => navigate("/home");
-  const goEdit = () => data && navigate(`/profile/${data._id}/edit`, { state: { user: data } });
+  const goEdit = () => data && navigate(`/profile/${data._id}/edit`);
 
   const initials = useMemo(() => {
     const name = (data?.username || "").trim();
@@ -85,6 +81,13 @@ export default function Profile() {
       </main>
     );
   }
+
+  const skills = Array.isArray(data.skills) ? data.skills : [];
+  const certs = Array.isArray(data.certificates)
+    ? data.certificates
+    : Array.isArray(data.certifications)
+    ? data.certifications
+    : [];
 
   return (
     <main className="p-page">
@@ -132,9 +135,11 @@ export default function Profile() {
           <section className="card">
             <div className="card-title">Skills &amp; Expertise</div>
             <div className="chips">
-              {(data.skills && data.skills.length > 0 ? data.skills : ["No skills yet"]).map((s, i) => (
-                <span key={i} className={`chip ${s === "No skills yet" ? "muted" : ""}`}>{s}</span>
-              ))}
+              {skills.length ? (
+                skills.map((s, i) => <span key={i} className="chip">{s}</span>)
+              ) : (
+                <span className="chip muted">No skills yet</span>
+              )}
             </div>
           </section>
 
@@ -179,9 +184,11 @@ export default function Profile() {
                 <div className="muted">Education not added.</div>
               )}
               <div className="cert-list">
-                {(data.certificates && data.certificates.length > 0 ? data.certificates : ["—"]).map((c, i) => (
-                  <div key={i} className={`cert ${c === "—" ? "muted" : ""}`}>{c}</div>
-                ))}
+                {certs.length ? (
+                  certs.map((c, i) => <div key={i} className="cert">{c}</div>)
+                ) : (
+                  <div className="muted">—</div>
+                )}
               </div>
             </div>
           </section>
